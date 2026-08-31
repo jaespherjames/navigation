@@ -91,9 +91,16 @@ function App() {
 
 
 
-      map.on('load', () => {
+      map.on('style.load', () => {
         map.setProjection({ type: 'globe' })
         map.resize()
+
+        map.setFog({
+          'range': [0.8, 8],
+          'color': 'rgba(255, 255, 255, 0)',
+          'high-color': 'rgba(36, 92, 223, 0.4)',
+          'space-color': 'rgba(0, 0, 0, 0)' // Set to transparent to reveal CSS stars
+        });
 
         const layers = map.getStyle().layers
         let labelLayerId
