@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
-import maplibreglWorker from 'maplibre-gl/dist/maplibre-gl-worker.js?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
-
-maplibregl.workerUrl = maplibreglWorker
-
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import './App.css'
+
+// Set once, before any map is created
+maplibregl.setWorkerUrl(workerUrl)
 
 function App() {
   const mapContainer = useRef(null)
