@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
+import maplibreglWorker from 'maplibre-gl/dist/maplibre-gl-worker.js?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
+
+maplibregl.workerUrl = maplibreglWorker
+
 import './App.css'
 
 function App() {
