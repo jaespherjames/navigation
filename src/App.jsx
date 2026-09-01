@@ -4,7 +4,6 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import './App.css'
 
-// Set once, before any map is created
 maplibregl.setWorkerUrl(workerUrl)
 
 function App() {
@@ -13,33 +12,30 @@ function App() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [mapStyle, setMapStyle] = useState('fiord')
   const [showLabels, setShowLabels] = useState(true)
+  const [show3d, setShow3d] = useState(true) // 1. State for 3D visibility
   const [buildingColor, setBuildingColor] = useState('#e0e0e0')
 
   useEffect(() => {
     let isCancelled = false
 
     const initMap = async () => {
-      // Fetch both style definitions
       const [fiordRes, brightRes] = await Promise.all([
+
         fetch('https://tiles.openfreemap.org/styles/fiord'),
-        fetch('https://tiles.openfreemap.org/styles/bright')
+        fetch('https://tiles.openfreemap.org/styles/bright'),
+
       ])
       const fiordJson = await fiordRes.json()
       const brightJson = await brightRes.json()
 
       let styleJson = mapStyle === 'bright' ? brightJson : fiordJson
 
-      // When using Fiord, import Bright's sprite AND POI layers
       if (mapStyle === 'fiord') {
         styleJson.sprite = brightJson.sprite
-
-        // Find layers in bright that render icons but aren't in fiord
         const fiordLayerIds = new Set(fiordJson.layers.map((l) => l.id))
         const poiLayers = brightJson.layers.filter(
           (layer) => !fiordLayerIds.has(layer.id) && layer.layout?.['icon-image']
         )
-
-        // Merge POI icon layers into Fiord
         styleJson.layers = [...styleJson.layers, ...poiLayers]
       }
 
@@ -64,7 +60,6 @@ function App() {
       map.on('zoom', () => {
         const currentZoom = map.getZoom();
 
-        // Case 1: Zooming out past threshold -> Level the map to 0 pitch
         if (currentZoom <= START_LEVELING_ZOOM && !isLevelingActive && map.getPitch() > 0) {
           isLevelingActive = true;
 
@@ -79,14 +74,12 @@ function App() {
 
           map.once('moveend', () => {
             map.scrollZoom.enable();
-            // Re-enable pitch controls if the user zoomed back in during the animation
             if (map.getZoom() > START_LEVELING_ZOOM) {
               map.dragRotate.enable();
             }
             isLevelingActive = false;
           });
         }
-        // Case 2: Zoomed in past threshold -> Ensure pitch/rotate controls are restored
         else if (currentZoom > START_LEVELING_ZOOM && !isLevelingActive && !map.dragRotate.isEnabled()) {
           map.dragRotate.enable();
         }
@@ -112,6 +105,9 @@ function App() {
             'source-layer': 'building',
             type: 'fill-extrusion',
             minzoom: 13,
+            layout: {
+              visibility: show3d ? 'visible' : 'none' // 2. Respect initial 3D state
+            },
             paint: {
               'fill-extrusion-color': buildingColor,
               'fill-extrusion-height': [
@@ -188,6 +184,20 @@ function App() {
     }
   }
 
+  // 3. Handler to toggle 3D building layer visibility
+  const toggle3d = () => {
+    const nextState = !show3d
+    setShow3d(nextState)
+
+    if (mapRef.current && mapRef.current.getLayer('real-3d-buildings')) {
+      mapRef.current.setLayoutProperty(
+        'real-3d-buildings',
+        'visibility',
+        nextState ? 'visible' : 'none'
+      )
+    }
+  }
+
   const handleColorChange = (e) => {
     const color = e.target.value
     setBuildingColor(color)
@@ -234,33 +244,93 @@ function App() {
               </div>
             </div>
 
-            <button className="theme-toggle-btn" onClick={toggleLabels}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 7V4h16v3" />
-                <path d="M9 20h6" />
-                <path d="M12 4v16" />
-              </svg>
-              <span>{showLabels ? 'Hide Labels' : 'Show Labels'}</span>
-            </button>
+            <div className="control-button-group">
+              {/* 3D Objects Button */}
+              <button
+                className={`icon-toggle-btn ${show3d ? 'is-active' : ''}`}
+                onClick={toggle3d}
+                aria-label="Toggle 3D Objects"
+                title={show3d ? "Hide 3D Objects" : "Show 3D Objects"}
+              >
+                <svg
+                  className="toggle-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                  <line x1="12" y1="22.08" x2="12" y2="12" />
+                </svg>
+              </button>
 
-            <button className="theme-toggle-btn" onClick={toggleMapStyle}>
-              {mapStyle === 'fiord' ? (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {/* Labels Button */}
+              <button
+                className={`icon-toggle-btn ${showLabels ? 'is-active' : ''}`}
+                onClick={toggleLabels}
+                aria-label="Toggle Labels"
+                title={showLabels ? "Hide Labels" : "Show Labels"}
+              >
+                <svg
+                  className="toggle-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 7V4h16v3" />
+                  <path d="M9 20h6" />
+                  <path d="M12 4v16" />
+                </svg>
+              </button>
+
+              {/* Theme Switch Button */}
+              <button
+                className={`icon-toggle-btn ${mapStyle === 'bright' ? 'is-bright' : ''}`}
+                onClick={toggleMapStyle}
+                aria-label="Toggle Theme"
+                title={mapStyle === 'fiord' ? 'Switch to Bright Mode' : 'Switch to Dark Mode'}
+              >
+                <div className="icon-wrapper">
+                  <svg
+                    className="theme-icon moon-icon"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                  <svg
+                    className="theme-icon sun-icon"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <circle cx="12" cy="12" r="4" />
                     <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
                   </svg>
-                  <span>Bright Mode</span>
-                </>
-              ) : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-                  </svg>
-                  <span>Fiord Mode</span>
-                </>
-              )}
-            </button>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </div>

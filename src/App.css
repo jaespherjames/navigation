@@ -65,6 +65,121 @@ body,
   align-items: flex-end;
 }
 
+@media (prefers-color-scheme: dark) {
+  .sidebar {
+    background-color: #363636; /* Dark charcoal gray (change to #252526 or #2d2d2d as desired) */
+    color: #e0e0e0;            /* Soft off-white text for high contrast */
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5); /* Stronger shadow contrast for dark mode */
+  }
+}
+
+/****************************************************************************
+----------------------------------------------------------------------------
+
+
+                      SIDSIDEBAR FOOTER & ICON BUTTONS BAR
+
+
+----------------------------------------------------------------------------
+****************************************************************************/
+
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.control-button-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Base Icon Button Style */
+.icon-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  background: transparent;
+  color: CanvasText;
+  opacity: 0.5;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.icon-toggle-btn:hover {
+  background-color: rgba(128, 128, 128, 0.15);
+  border-color: rgba(128, 128, 128, 0.5);
+  opacity: 0.85;
+}
+
+.icon-toggle-btn:active {
+  transform: scale(0.92);
+}
+
+/* Active state for Labels & 3D Objects */
+.icon-toggle-btn.is-active {
+  opacity: 1;
+  background-color: rgba(128, 128, 128, 0.15);
+  border-color: rgba(128, 128, 128, 0.6);
+}
+
+.icon-toggle-btn.is-active .toggle-icon {
+  transform: scale(1.08);
+}
+
+.toggle-icon {
+  transition: transform 0.25s ease;
+}
+
+/* Theme Icon Morphing Animation */
+.icon-toggle-btn {
+  opacity: 1; /* Always visible for theme switch */
+}
+
+.icon-wrapper {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-icon {
+  position: absolute;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.moon-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.sun-icon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}
+
+.icon-toggle-btn.is-bright .moon-icon {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
+}
+
+.icon-toggle-btn.is-bright .sun-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
 /****************************************************************************
 ----------------------------------------------------------------------------
 
@@ -142,24 +257,71 @@ body,
 ----------------------------------------------------------------------------
 ****************************************************************************/
 
+/****************************************************************************
+                                THEME TOGGLE BUTTON
+****************************************************************************/
+
 .theme-toggle-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: 20px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
   border: 1px solid rgba(128, 128, 128, 0.3);
   background: transparent;
   color: CanvasText;
-  font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .theme-toggle-btn:hover {
   background-color: rgba(128, 128, 128, 0.15);
   border-color: rgba(128, 128, 128, 0.5);
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.92);
+}
+
+/* Container to overlap icons */
+.icon-wrapper {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Base icon transition properties */
+.theme-icon {
+  position: absolute;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+/* Initial state (Fiord / Dark mode: Moon active) */
+.moon-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.sun-icon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}
+
+/* Bright mode state (Sun active) */
+.theme-toggle-btn.is-bright .moon-icon {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
+}
+
+.theme-toggle-btn.is-bright .sun-icon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
 }
 
 
@@ -245,3 +407,5 @@ body,
   background-repeat: no-repeat;
   background-color: #05050f; /* Fallback color */
 }
+
+
