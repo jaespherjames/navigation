@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
-  base: "/navigation",
+  base: "/navigation/",
   optimizeDeps: {
     exclude: ['maplibre-gl'],},
 });
