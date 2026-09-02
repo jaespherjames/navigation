@@ -9,36 +9,114 @@ maplibregl.setWorkerUrl(workerUrl)
 function App() {
   const mapContainer = useRef(null)
   const mapRef = useRef(null)
+  const stylesCache = useRef({}) // Cache pre-fetched styles
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [mapStyle, setMapStyle] = useState('fiord')
   const [showLabels, setShowLabels] = useState(true)
-  const [show3d, setShow3d] = useState(true) // 1. State for 3D visibility
+  const [show3d, setShow3d] = useState(true)
   const [buildingColor, setBuildingColor] = useState('#e0e0e0')
+  const show3dRef = useRef(show3d)
+  const showLabelsRef = useRef(showLabels)
+  const buildingColorRef = useRef(buildingColor)
+
+
+  useEffect(() => { show3dRef.current = show3d }, [show3d])
+  useEffect(() => { showLabelsRef.current = showLabels }, [showLabels])
+  useEffect(() => { buildingColorRef.current = buildingColor }, [buildingColor])
+
+  const applyCustomLayers = (map) => {
+    map.setProjection({ type: 'globe' })
+
+    const layers = map.getStyle().layers
+    let labelLayerId
+    for (let i = 0; i < layers.length; i++) {
+      if (layers[i].type === 'symbol' && layers[i].layout?.['text-field']) {
+        labelLayerId = layers[i].id
+        break
+      }
+    }
+
+    // 1. Add 3D layer if it doesn't exist, using current state for visibility & color
+    if (!map.getLayer('real-3d-buildings')) {
+      map.addLayer(
+        {
+          id: 'real-3d-buildings',
+          source: 'openmaptiles',
+          'source-layer': 'building',
+          type: 'fill-extrusion',
+          minzoom: 13,
+          layout: {
+            visibility: show3dRef.current ? 'visible' : 'none' // Syncs current show3d state
+          },
+          paint: {
+            'fill-extrusion-color': buildingColorRef.current, // Syncs current color state
+            'fill-extrusion-height': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              13,
+              0,
+              15.05,
+              ['coalesce', ['get', 'render_height'], ['get', 'height'], 10]
+            ],
+            'fill-extrusion-base': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              13,
+              0,
+              15.05,
+              ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0]
+            ],
+            'fill-extrusion-opacity': 0.8
+          }
+        },
+        labelLayerId
+      )
+    }
+
+    // 2. Re-apply current label visibility state across all symbol layers
+    const labelVisibility = showLabelsRef.current ? 'visible' : 'none'
+    layers.forEach((layer) => {
+      if (layer.type === 'symbol') {
+        map.setLayoutProperty(layer.id, 'visibility', labelVisibility)
+      }
+    })
+  }
+
+  // Helper to load/combine style JSON
+  const getStyleJson = async (targetStyle) => {
+    if (stylesCache.current[targetStyle]) {
+      return stylesCache.current[targetStyle]
+    }
+
+    const [fiordRes, brightRes] = await Promise.all([
+      fetch('https://tiles.openfreemap.org/styles/fiord'),
+      fetch('https://tiles.openfreemap.org/styles/bright'),
+    ])
+    const fiordJson = await fiordRes.json()
+    const brightJson = await brightRes.json()
+
+    let styleJson = targetStyle === 'bright' ? brightJson : fiordJson
+
+    if (targetStyle === 'fiord') {
+      styleJson.sprite = brightJson.sprite
+      const fiordLayerIds = new Set(fiordJson.layers.map((l) => l.id))
+      const poiLayers = brightJson.layers.filter(
+        (layer) => !fiordLayerIds.has(layer.id) && layer.layout?.['icon-image']
+      )
+      styleJson.layers = [...styleJson.layers, ...poiLayers]
+    }
+
+    stylesCache.current[targetStyle] = styleJson
+    return styleJson
+  }
 
   useEffect(() => {
     let isCancelled = false
 
     const initMap = async () => {
-      const [fiordRes, brightRes] = await Promise.all([
-
-        fetch('https://tiles.openfreemap.org/styles/fiord'),
-        fetch('https://tiles.openfreemap.org/styles/bright'),
-
-      ])
-      const fiordJson = await fiordRes.json()
-      const brightJson = await brightRes.json()
-
-      let styleJson = mapStyle === 'bright' ? brightJson : fiordJson
-
-      if (mapStyle === 'fiord') {
-        styleJson.sprite = brightJson.sprite
-        const fiordLayerIds = new Set(fiordJson.layers.map((l) => l.id))
-        const poiLayers = brightJson.layers.filter(
-          (layer) => !fiordLayerIds.has(layer.id) && layer.layout?.['icon-image']
-        )
-        styleJson.layers = [...styleJson.layers, ...poiLayers]
-      }
-
+      const styleJson = await getStyleJson('fiord')
       if (isCancelled) return
 
       const map = new maplibregl.Map({
@@ -54,92 +132,35 @@ function App() {
       mapRef.current = map
       map.addControl(new maplibregl.NavigationControl(), 'top-right')
 
-      const START_LEVELING_ZOOM = 4;
-      let isLevelingActive = false;
+      const START_LEVELING_ZOOM = 4
+      let isLevelingActive = false
 
       map.on('zoom', () => {
-        const currentZoom = map.getZoom();
-
+        const currentZoom = map.getZoom()
         if (currentZoom <= START_LEVELING_ZOOM && !isLevelingActive && map.getPitch() > 0) {
-          isLevelingActive = true;
-
-          map.scrollZoom.disable();
-          map.dragRotate.disable();
-
+          isLevelingActive = true
+          map.scrollZoom.disable()
+          map.dragRotate.disable()
           map.easeTo({
             pitch: 0,
-            duration: 200,
+            duration: 150,
             easing: (t) => t * (2 - t)
-          });
-
+          })
           map.once('moveend', () => {
-            map.scrollZoom.enable();
+            map.scrollZoom.enable()
             if (map.getZoom() > START_LEVELING_ZOOM) {
-              map.dragRotate.enable();
+              map.dragRotate.enable()
             }
-            isLevelingActive = false;
-          });
+            isLevelingActive = false
+          })
+        } else if (currentZoom > START_LEVELING_ZOOM && !isLevelingActive && !map.dragRotate.isEnabled()) {
+          map.dragRotate.enable()
         }
-        else if (currentZoom > START_LEVELING_ZOOM && !isLevelingActive && !map.dragRotate.isEnabled()) {
-          map.dragRotate.enable();
-        }
-      });
+      })
 
       map.on('load', () => {
-        map.setProjection({ type: 'globe' })
         map.resize()
-
-        const layers = map.getStyle().layers
-        let labelLayerId
-        for (let i = 0; i < layers.length; i++) {
-          if (layers[i].type === 'symbol' && layers[i].layout?.['text-field']) {
-            labelLayerId = layers[i].id
-            break
-          }
-        }
-
-        map.addLayer(
-          {
-            id: 'real-3d-buildings',
-            source: 'openmaptiles',
-            'source-layer': 'building',
-            type: 'fill-extrusion',
-            minzoom: 13,
-            layout: {
-              visibility: show3d ? 'visible' : 'none' // 2. Respect initial 3D state
-            },
-            paint: {
-              'fill-extrusion-color': buildingColor,
-              'fill-extrusion-height': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                13,
-                0,
-                15.05,
-                ['coalesce', ['get', 'render_height'], ['get', 'height'], 10]
-              ],
-              'fill-extrusion-base': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                13,
-                0,
-                15.05,
-                ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0]
-              ],
-              'fill-extrusion-opacity': 0.8
-            }
-          },
-          labelLayerId
-        )
-
-        const visibility = showLabels ? 'visible' : 'none'
-        layers.forEach((layer) => {
-          if (layer.type === 'symbol') {
-            map.setLayoutProperty(layer.id, 'visibility', visibility)
-          }
-        })
+        applyCustomLayers(map)
       })
     }
 
@@ -152,7 +173,7 @@ function App() {
         mapRef.current = null
       }
     }
-  }, [mapStyle])
+  }, []) // Empty dependency array so map initializes only once
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed)
@@ -163,9 +184,21 @@ function App() {
     }, 300)
   }
 
-  const toggleMapStyle = () => {
+  const toggleMapStyle = async () => {
     const nextStyle = mapStyle === 'fiord' ? 'bright' : 'fiord'
     setMapStyle(nextStyle)
+
+    if (mapRef.current) {
+      const styleJson = await getStyleJson(nextStyle)
+
+      // Preserve current view explicitly with transform
+      mapRef.current.setStyle(styleJson, { transformStyle: (previous, next) => next })
+
+      // Re-apply custom layers once new style finishes loading
+      mapRef.current.once('style.load', () => {
+        applyCustomLayers(mapRef.current)
+      })
+    }
   }
 
   const toggleLabels = () => {
