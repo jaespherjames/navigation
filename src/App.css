@@ -330,12 +330,142 @@ body,
 ----------------------------------------------------------------------------
 
 
-                                THEME TOGGLE BUTTON
+                                OVERLAY CORNER HANDLE
 
 
 ----------------------------------------------------------------------------
 ****************************************************************************/
 
+/* Corner handles for scaling/shaping */
+.overlay-corner-handle {
+  width: 12px;
+  height: 12px;
+  background-color: #ffffff;
+  border: 2px solid #3b82f6;
+  border-radius: 50%;
+  cursor: grab;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.overlay-corner-handle:hover {
+  transform: scale(1.25);
+  background-color: #3b82f6;
+}
+
+.overlay-corner-handle:active {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+
+/* Center handle for dragging the entire overlay */
+.overlay-center-handle {
+  width: 24px; /* Increased from 16px */
+  height: 24px; /* Increased from 16px */
+  background-color: #00B4D8;
+  border: none;
+  cursor: move;
+  /* Thinner plus/cross shape */
+  clip-path: polygon(
+    45% 0%, 55% 0%, 
+    55% 45%, 100% 45%, 
+    100% 55%, 55% 55%, 
+    55% 100%, 45% 100%, 
+    45% 55%, 0% 55%, 
+    0% 45%, 45% 45%
+  );
+}
+
+.overlay-center-handle:hover {
+  transform: scale(1.25);
+  background-color: #2563eb;
+}
+
+.overlay-center-handle:active {
+  cursor: grabbing;
+}
+
+/****************************************************************************
+----------------------------------------------------------------------------
+
+
+                                SVG BUILDING OVERLAY
+
+
+----------------------------------------------------------------------------
+****************************************************************************/
+
+.svg-overlay-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  font-size: 13px;
+  font-weight: 500;
+  color: CanvasText;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.svg-overlay-title {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.svg-upload-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  background: transparent;
+  color: CanvasText;
+  font-size: 13px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.svg-upload-btn:hover {
+  background-color: rgba(128, 128, 128, 0.15);
+  border-color: rgba(128, 128, 128, 0.5);
+}
+
+.svg-width-label {
+  opacity: 0.85;
+}
+
+.svg-overlay-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.svg-overlay-actions button {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  background: transparent;
+  color: CanvasText;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.svg-overlay-actions button:hover {
+  background-color: rgba(128, 128, 128, 0.15);
+}
+
+.svg-overlay-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.svg-remove-btn {
+  color: #e05252;
+  border-color: rgba(224, 82, 82, 0.4) !important;
+}
 
 .color-picker-control {
   display: flex;
@@ -407,5 +537,3 @@ body,
   background-repeat: no-repeat;
   background-color: #05050f; /* Fallback color */
 }
-
-

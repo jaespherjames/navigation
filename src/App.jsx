@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+import SvgMapOverlay from './SvgMapOverlay.jsx'
 import './App.css'
 
 maplibregl.setWorkerUrl(workerUrl)
@@ -9,16 +10,17 @@ maplibregl.setWorkerUrl(workerUrl)
 function App() {
   const mapContainer = useRef(null)
   const mapRef = useRef(null)
-  const stylesCache = useRef({}) // Cache pre-fetched styles
+  const stylesCache = useRef({})
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [mapStyle, setMapStyle] = useState('fiord')
   const [showLabels, setShowLabels] = useState(true)
   const [show3d, setShow3d] = useState(true)
   const [buildingColor, setBuildingColor] = useState('#e0e0e0')
+  const [mapInstance, setMapInstance] = useState(null)
+  const [mapReady, setMapReady] = useState(false)
   const show3dRef = useRef(show3d)
   const showLabelsRef = useRef(showLabels)
   const buildingColorRef = useRef(buildingColor)
-
 
   useEffect(() => { show3dRef.current = show3d }, [show3d])
   useEffect(() => { showLabelsRef.current = showLabels }, [showLabels])
@@ -46,10 +48,10 @@ function App() {
           type: 'fill-extrusion',
           minzoom: 13,
           layout: {
-            visibility: show3dRef.current ? 'visible' : 'none' // Syncs current show3d state
+            visibility: show3dRef.current ? 'visible' : 'none'
           },
           paint: {
-            'fill-extrusion-color': buildingColorRef.current, // Syncs current color state
+            'fill-extrusion-color': buildingColorRef.current,
             'fill-extrusion-height': [
               'interpolate',
               ['linear'],
@@ -130,6 +132,7 @@ function App() {
       })
 
       mapRef.current = map
+      setMapInstance(map)
       map.addControl(new maplibregl.NavigationControl(), 'top-right')
 
       const START_LEVELING_ZOOM = 4
@@ -160,6 +163,7 @@ function App() {
 
       map.on('load', () => {
         map.resize()
+        setMapReady(true)
       })
 
       // Ensure initial projection and layers apply cleanly on first render
@@ -272,6 +276,8 @@ function App() {
           <p>Controls & Options go here.</p>
 
           <div className="sidebar-footer">
+            <SvgMapOverlay map={mapInstance} mapReady={mapReady} />
+
             <div className="color-picker-control">
               <label htmlFor="building-color-picker">Building Color</label>
               <div className="color-picker-wrapper">
@@ -286,6 +292,7 @@ function App() {
             </div>
 
             <div className="control-button-group">
+              
               {/* 3D Objects Button */}
               <button
                 className={`icon-toggle-btn ${show3d ? 'is-active' : ''}`}
