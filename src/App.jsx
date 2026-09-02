@@ -122,11 +122,11 @@ function App() {
       const map = new maplibregl.Map({
         container: mapContainer.current,
         style: styleJson,
-        center: [-74.006, 40.7128],
+        center: [0,20],
         minZoom: 3,
-        zoom: 16,
-        pitch: 60,
-        bearing: -17.6,
+        zoom: 1.5,
+        pitch: 0,
+        bearing: 0,
       })
 
       mapRef.current = map
@@ -160,6 +160,11 @@ function App() {
 
       map.on('load', () => {
         map.resize()
+      })
+
+      // Ensure initial projection and layers apply cleanly on first render
+      map.once('styledata', () => {
+        map.setProjection({ type: 'globe' })
         applyCustomLayers(map)
       })
     }
@@ -191,11 +196,14 @@ function App() {
     if (mapRef.current) {
       const styleJson = await getStyleJson(nextStyle)
 
-      // Preserve current view explicitly with transform
+      // 1. Re-apply globe projection explicitly on style switch
+      mapRef.current.setProjection({ type: 'globe' })
+
+      // 2. Preserve view state across style changes
       mapRef.current.setStyle(styleJson, { transformStyle: (previous, next) => next })
 
-      // Re-apply custom layers once new style finishes loading
-      mapRef.current.once('style.load', () => {
+      // 3. Wait for styledata to ensure layers attach properly
+      mapRef.current.once('styledata', () => {
         applyCustomLayers(mapRef.current)
       })
     }
